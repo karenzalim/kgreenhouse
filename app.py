@@ -173,7 +173,16 @@ def readADS(printing=True):
       sensordata["A0"]=new_ch0
       v = new_ch1*4.096/32767
       # awas math error, batasi v supaya 33000-v*10000 tidak negatif
-      v = max(3.2, v) # sekitar 2,7 juta lux - kalau sampai angka segini mungkin LDRnya korslet?
+      if v>3.2:
+        print("LDR overvoltage:",v)
+      elif v<=0:
+        print("LDR voltage error, check connection! v =",v)
+      try:
+        v = min(3.2, v) # sekitar 2,7 juta lux - kalau sampai angka segini mungkin LDRnya korslet?
+        lux = math.pow(((33000-v*10000)/(v*1043460)), (-1/0.548))
+      except:
+        print("Math error - set lux=0")
+        lux=0
       lux = math.pow(((33000-v*10000)/(v*1043460)), (-1/0.548))
       #lux = exp(-ln(d)/0.548)+22.7)
       #lux = math.exp(-math.log(new_ch1)/0.548+22.7)
