@@ -9,6 +9,7 @@ import pwmio
 import requests
 import json
 import math
+import os
 
 #startup, objek-objek dan variabel global
 print("Program start")
@@ -57,7 +58,7 @@ dht = adafruit_dht.DHT11(board.D4)
 #variabel untuk menyimpan segala data dan status
 status={"dht":0, "ADS": 0, "time": 0, "pwmout": 0, "pump": 0, "led": 0,"sudah_nyiram": False, "menit_terakhir": 0, "percentage_led":0}
 sensordata={"A0":0, "A1": 0, "temp": 0, "humid": 0}
-settings={"interval":2, "report_update": 300, "running": 1, "kering":26556, "basah":14949, "lux_min":15000, "lux_max":30000, "durasi_max_pump":10}
+settings={"interval":2, "report_update": 300, "running": 1, "kering":26556, "basah":14949, "lux_min":15000, "lux_max":30000, "durasi_max_pump":10, "settingsfile":"settings.txt", "jadwalfile":""}
 jadwal=[]
 
 #thread lock untuk mencegah tabrakan antara thread measurement dan server mengakses data
@@ -66,7 +67,7 @@ jadwallock= threading.Lock()
 
 #server
 print("setup server")
-myapp = Flask(__name__)
+myapp = Flask(__name__)kodosapiens@gmail.com
 
 #web pages
 @myapp.route('/')
@@ -125,6 +126,8 @@ def inputjadwal():
   if l is not None:
     print("load>", l)
     bukajadwal(l)
+    settings["jadwalfile"]=l
+    savesettingsfile()
     return "OK"
 #kalau sampai sini berarti tidak ada parameter
   print("tidak ada param")
@@ -193,6 +196,11 @@ def setled(no=0,state=0):
 def pwmout(percentage):
   ledpwm.duty_cycle = int(percentage*65535/100)
 
+def savesettingsfile():
+  f = open(settings["settingsfile"],'w')
+  f.write(json.dumps(settings)+'\n')
+  f.close()
+
 #fungsi-fungsi jadwal
 def tambahjadwal(j):
   with jadwallock:
@@ -211,6 +219,9 @@ def savejadwal(namafile):
       f.write(json.dumps(j)+"\n")
     f.close()
   print("save jadwal", namafile)
+  #save ke settings dan settingsfile
+  settings["jadwalfile"]=namafile
+  savesettingsfile()
 
 def bukajadwal(namafile):
   clearjadwal()
@@ -331,6 +342,37 @@ setled(0,0)
 time.sleep(0.2)
 setled(1,0)
 
+#cek settings apa ada jadwal yang diatur
+
+#pastikan working directory sesuai dengan letak script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+print("working directory:",script_dir)
+os.chdir(script_dir)
+
+#cek dulu apa file settings ada
+print("Cek file:",settings["settingsfile"])
+if os.path.isfile(settings["settingsfile"]):
+  f = open(settings["settingsfile"],'r')
+  lines = f.readlines()
+  f.close()
+  print(lines)
+  settingsfromfile=json.loads(lines[0])
+  if "jadwalfile" in settingsfromfile:
+    print("membuka jadwal:",settingsfromfile["jadwalfile"])
+    if os.path.isfile(settingsfromfile["jadwalfile"]):
+      settings["jadwalfile"]=settingsfromfile["jadwalfile"]
+      #buka jadwal, semoga tidak error
+      bukajadwal(settings["jadwalfile"])
+    else:
+      print("file tidak ditemukan... kecewa.")
+  else:
+    print("Tidak ditemukan entri jadwalfile.")
+else:
+  print("file",settings["settingsfile"],"tidak ada. Membuat yang baru...")
+  savesettingsfile()
+
+print("load settings selesai. Starting threads...")
+    
 if __name__== "__main__": #untuk apasih ini
   server_thread = threading.Thread(target=start_server_thread, daemon=True)
   server_thread.start()
