@@ -67,7 +67,7 @@ jadwallock= threading.Lock()
 
 #server
 print("setup server")
-myapp = Flask(__name__)kodosapiens@gmail.com
+myapp = Flask(__name__)
 
 #web pages
 @myapp.route('/')
