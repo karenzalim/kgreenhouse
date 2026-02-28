@@ -128,8 +128,9 @@ def changeset():
     elif testled<0:
       testled=0
     pwmout(testled)
-    with datalock:
-      status["percentage_led"]=testled
+    #jangan bilang-bilang ke status supaya tidak dimatikan oleh thread control
+    #with datalock:
+    #  status["percentage_led"]=testled
 
   #aktifkan LED auto brightness secara manual lewat request autoled=...(1/0)
   autoled = request.args.get('autoled')
