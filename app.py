@@ -47,9 +47,12 @@ print("setup PWM")
 ledpwm = pwmio.PWMOut(board.D18,frequency=1000,duty_cycle=0)
 
 #sensor apa yang terpasang di A0 dan A1?
-print("setup ADS1115")
-ch0 = AnalogIn(ads, ads1x15.Pin.A0)
-ch1 = AnalogIn(ads, ads1x15.Pin.A1)
+if i2cstatus:
+  print("setup ADS1115")
+  ch0 = AnalogIn(ads, ads1x15.Pin.A0)
+  ch1 = AnalogIn(ads, ads1x15.Pin.A1)
+else:
+  print("ADS1115 not detected!")
 
 #DHT11
 print("setup DHT11")
