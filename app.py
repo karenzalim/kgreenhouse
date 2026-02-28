@@ -105,7 +105,12 @@ def changeset():
   if restart is not None and restart == 'y':
     with datalock:
       settings["running"]=0
-
+  #test pompa manual lewat request testpump=... (dalam detik)
+  testpump = request.args.get('testpump')
+  if testpump is not None and int(testpump)<=200:
+    with datalock:
+      status["testpump"]=int(testpump)
+  
   with datalock:
     s = jsonify(settings)
   return s
@@ -298,6 +303,14 @@ def start_control_thread():
         print(url+pm)
         R=requests.get(url+pm)
         print('upload action>', R.ok)
+    if status["testpump"]>0:
+      print("Nyiram manual! t=", status["testpump"])
+      setled(no=2,state=1)
+      time.sleep(status["testpump"])
+      setled(no=2,state=0)
+      with datalock:
+        status["testpump"]=0
+      
     time.sleep(2)
         
 #thread server
