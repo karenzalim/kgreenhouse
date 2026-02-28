@@ -46,6 +46,13 @@ GPIO.setwarnings(False)
 print("setup PWM")
 ledpwm = pwmio.PWMOut(board.D18,frequency=1000,duty_cycle=0)
 
+#LED indikator, nomornya 0 dan 1
+def setled(no=0,state=0):
+  GPIO.output(pinLED[no], GPIO.HIGH if state>0 else GPIO.LOW)
+
+def pwmout(percentage):
+  ledpwm.duty_cycle = int(percentage*65535/100)
+
 #sensor apa yang terpasang di A0 dan A1?
 if i2cstatus:
   print("setup ADS1115")
@@ -105,12 +112,35 @@ def changeset():
   if restart is not None and restart == 'y':
     with datalock:
       settings["running"]=0
+
   #test pompa manual lewat request testpump=... (dalam detik)
   testpump = request.args.get('testpump')
   if testpump is not None and int(testpump)<=200:
     with datalock:
       status["testpump"]=int(testpump)
-  
+
+  #nyalakan led manual lewat request testled=...(dalam persen)
+  testled = request.args.get('testled')
+  if testled is not None:
+    testled=int(testled)
+    if testled>100:
+      testled=100
+    elif testled<0:
+      testled=0
+    pwmout(testled)
+    with datalock:
+      status["percentage_led"]=testled
+
+  #aktifkan LED auto brightness secara manual lewat request autoled=...(1/0)
+  autoled = request.args.get('autoled')
+  if autoled is not None :
+    if int(autoled)>0:
+      with datalock:
+        status["led"]=1
+    else:
+      with datalock:
+        status["led"]=0
+        
   with datalock:
     s = jsonify(settings)
   return s
@@ -197,13 +227,6 @@ def readADS(printing=True):
     with datalock: 
       status["ADS"]=0
 
-#LED indikator, nomornya 0 dan 1
-def setled(no=0,state=0):
-  GPIO.output(pinLED[no], GPIO.HIGH if state>0 else GPIO.LOW)
-
-def pwmout(percentage):
-  ledpwm.duty_cycle = int(percentage*65535/100)
-
 def savesettingsfile():
   f = open(settings["settingsfile"],'w')
   f.write(json.dumps(settings)+'\n')
@@ -286,7 +309,10 @@ def start_control_thread():
         pwmout(percentage)
         print("ga nyala, dah terang")
     elif status["led"]==0:
-      pwmout(0)
+      if status["percentage_led"] > 0:
+        print("LED masih nyala, mematikan sesuai jadwal")
+        pwmout(0)
+        percentage = 0
       print("led mati")
     status["percentage_led"]=percentage
     #nyalain pompa
