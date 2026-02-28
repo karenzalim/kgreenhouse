@@ -59,7 +59,7 @@ print("setup DHT11")
 dht = adafruit_dht.DHT11(board.D4)
 
 #variabel untuk menyimpan segala data dan status
-status={"dht":0, "ADS": 0, "time": 0, "pwmout": 0, "pump": 0, "led": 0,"sudah_nyiram": False, "menit_terakhir": 0, "percentage_led":0}
+status={"dht":0, "ADS": 0, "time": 0, "pwmout": 0, "pump": 0, "led": 0,"sudah_nyiram": False, "menit_terakhir": 0, "percentage_led":0,"testpump":0}
 sensordata={"A0":0, "A1": 0, "temp": 0, "humid": 0}
 settings={"interval":2, "report_update": 300, "running": 1, "kering":26556, "basah":14949, "lux_min":15000, "lux_max":30000, "durasi_max_pump":10, "settingsfile":"settings.txt", "jadwalfile":""}
 jadwal=[]
