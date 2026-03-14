@@ -9,6 +9,7 @@ import pwmio
 import requests
 import json
 import math
+import os
 
 #startup, objek-objek dan variabel global
 print("Program start")
@@ -45,19 +46,29 @@ GPIO.setwarnings(False)
 print("setup PWM")
 ledpwm = pwmio.PWMOut(board.D18,frequency=1000,duty_cycle=0)
 
+#LED indikator, nomornya 0 dan 1
+def setled(no=0,state=0):
+  GPIO.output(pinLED[no], GPIO.HIGH if state>0 else GPIO.LOW)
+
+def pwmout(percentage):
+  ledpwm.duty_cycle = int(percentage*65535/100)
+
 #sensor apa yang terpasang di A0 dan A1?
-print("setup ADS1115")
-ch0 = AnalogIn(ads, ads1x15.Pin.A0)
-ch1 = AnalogIn(ads, ads1x15.Pin.A1)
+if i2cstatus:
+  print("setup ADS1115")
+  ch0 = AnalogIn(ads, ads1x15.Pin.A0)
+  ch1 = AnalogIn(ads, ads1x15.Pin.A1)
+else:
+  print("ADS1115 not detected!")
 
 #DHT11
 print("setup DHT11")
 dht = adafruit_dht.DHT11(board.D4)
 
 #variabel untuk menyimpan segala data dan status
-status={"dht":0, "ADS": 0, "time": 0, "pwmout": 0, "pump": 0, "led": 0,"sudah_nyiram": False, "menit_terakhir": 0, "percentage_led":0}
+status={"dht":0, "ADS": 0, "time": 0, "pwmout": 0, "pump": 0, "led": 0,"sudah_nyiram": False, "menit_terakhir": 0, "percentage_led":0,"testpump":0}
 sensordata={"A0":0, "A1": 0, "temp": 0, "humid": 0}
-settings={"interval":2, "report_update": 300, "running": 1, "kering":26556, "basah":14949, "lux_min":15000, "lux_max":30000, "durasi_max_pump":10}
+settings={"interval":2, "report_update": 300, "running": 1, "kering":26556, "basah":14949, "lux_min":15000, "lux_max":30000, "durasi_max_pump":10, "settingsfile":"settings.txt", "jadwalfile":""}
 jadwal=[]
 
 #thread lock untuk mencegah tabrakan antara thread measurement dan server mengakses data
@@ -102,6 +113,35 @@ def changeset():
     with datalock:
       settings["running"]=0
 
+  #test pompa manual lewat request testpump=... (dalam detik)
+  testpump = request.args.get('testpump')
+  if testpump is not None and int(testpump)<=200:
+    with datalock:
+      status["testpump"]=int(testpump)
+
+  #nyalakan led manual lewat request testled=...(dalam persen)
+  testled = request.args.get('testled')
+  if testled is not None:
+    testled=int(testled)
+    if testled>100:
+      testled=100
+    elif testled<0:
+      testled=0
+    pwmout(testled)
+    #jangan bilang-bilang ke status supaya tidak dimatikan oleh thread control
+    #with datalock:
+    #  status["percentage_led"]=testled
+
+  #aktifkan LED auto brightness secara manual lewat request autoled=...(1/0)
+  autoled = request.args.get('autoled')
+  if autoled is not None :
+    if int(autoled)>0:
+      with datalock:
+        status["led"]=1
+    else:
+      with datalock:
+        status["led"]=0
+        
   with datalock:
     s = jsonify(settings)
   return s
@@ -125,6 +165,8 @@ def inputjadwal():
   if l is not None:
     print("load>", l)
     bukajadwal(l)
+    settings["jadwalfile"]=l
+    savesettingsfile()
     return "OK"
 #kalau sampai sini berarti tidak ada parameter
   print("tidak ada param")
@@ -186,12 +228,10 @@ def readADS(printing=True):
     with datalock: 
       status["ADS"]=0
 
-#LED indikator, nomornya 0 dan 1
-def setled(no=0,state=0):
-  GPIO.output(pinLED[no], GPIO.HIGH if state>0 else GPIO.LOW)
-
-def pwmout(percentage):
-  ledpwm.duty_cycle = int(percentage*65535/100)
+def savesettingsfile():
+  f = open(settings["settingsfile"],'w')
+  f.write(json.dumps(settings)+'\n')
+  f.close()
 
 #fungsi-fungsi jadwal
 def tambahjadwal(j):
@@ -211,6 +251,9 @@ def savejadwal(namafile):
       f.write(json.dumps(j)+"\n")
     f.close()
   print("save jadwal", namafile)
+  #save ke settings dan settingsfile
+  settings["jadwalfile"]=namafile
+  savesettingsfile()
 
 def bukajadwal(namafile):
   clearjadwal()
@@ -267,7 +310,10 @@ def start_control_thread():
         pwmout(percentage)
         print("ga nyala, dah terang")
     elif status["led"]==0:
-      pwmout(0)
+      if status["percentage_led"] > 0:
+        print("LED masih nyala, mematikan sesuai jadwal")
+        pwmout(0)
+        percentage = 0
       print("led mati")
     status["percentage_led"]=percentage
     #nyalain pompa
@@ -284,6 +330,14 @@ def start_control_thread():
         print(url+pm)
         R=requests.get(url+pm)
         print('upload action>', R.ok)
+    if status["testpump"]>0:
+      print("Nyiram manual! t=", status["testpump"])
+      setled(no=2,state=1)
+      time.sleep(status["testpump"])
+      setled(no=2,state=0)
+      with datalock:
+        status["testpump"]=0
+      
     time.sleep(2)
         
 #thread server
@@ -309,8 +363,11 @@ def start_report_thread():
     with datalock:
       pm = '?temp='+str(sensordata["temp"])+'&hum='+str(sensordata["humid"])+'&light='+str(sensordata["A1"])+'&sm='+str(sensordata["A0"])+'&led='+str(status["percentage_led"])
     print(url+pm)
-    R=requests.get(url+pm)
-    print('upload data>', R.ok)
+    try:
+      R=requests.get(url+pm)
+      print('upload data>', R.ok)
+    except:
+      print("ini error reportnya")
     #time.sleep(settings["report_update"])
     t1=time.time()
     t2=t1
@@ -331,6 +388,37 @@ setled(0,0)
 time.sleep(0.2)
 setled(1,0)
 
+#cek settings apa ada jadwal yang diatur
+
+#pastikan working directory sesuai dengan letak script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+print("working directory:",script_dir)
+os.chdir(script_dir)
+
+#cek dulu apa file settings ada
+print("Cek file:",settings["settingsfile"])
+if os.path.isfile(settings["settingsfile"]):
+  f = open(settings["settingsfile"],'r')
+  lines = f.readlines()
+  f.close()
+  print(lines)
+  settingsfromfile=json.loads(lines[0])
+  if "jadwalfile" in settingsfromfile:
+    print("membuka jadwal:",settingsfromfile["jadwalfile"])
+    if os.path.isfile(settingsfromfile["jadwalfile"]):
+      settings["jadwalfile"]=settingsfromfile["jadwalfile"]
+      #buka jadwal, semoga tidak error
+      bukajadwal(settings["jadwalfile"])
+    else:
+      print("file tidak ditemukan... kecewa.")
+  else:
+    print("Tidak ditemukan entri jadwalfile.")
+else:
+  print("file",settings["settingsfile"],"tidak ada. Membuat yang baru...")
+  savesettingsfile()
+
+print("load settings selesai. Starting threads...")
+    
 if __name__== "__main__": #untuk apasih ini
   server_thread = threading.Thread(target=start_server_thread, daemon=True)
   server_thread.start()
