@@ -363,8 +363,11 @@ def start_report_thread():
     with datalock:
       pm = '?temp='+str(sensordata["temp"])+'&hum='+str(sensordata["humid"])+'&light='+str(sensordata["A1"])+'&sm='+str(sensordata["A0"])+'&led='+str(status["percentage_led"])
     print(url+pm)
-    R=requests.get(url+pm)
-    print('upload data>', R.ok)
+    try:
+      R=requests.get(url+pm)
+      print('upload data>', R.ok)
+    except:
+      print("ini error reportnya")
     #time.sleep(settings["report_update"])
     t1=time.time()
     t2=t1
