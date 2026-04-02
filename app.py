@@ -68,7 +68,7 @@ dht = adafruit_dht.DHT11(board.D4)
 #variabel untuk menyimpan segala data dan status
 status={"dht":0, "ADS": 0, "time": 0, "pwmout": 0, "pump": 0, "led": 0,"sudah_nyiram": False, "menit_terakhir": 0, "percentage_led":0,"testpump":0}
 sensordata={"A0":0, "A1": 0, "temp": 0, "humid": 0}
-settings={"interval":2, "report_update": 300, "running": 1, "kering":11000, "basah":9600, "lux_min":15000, "lux_max":30000, "durasi_max_pump":30, "settingsfile":"settings.txt", "jadwalfile":""}
+settings={"interval":2, "report_update": 300, "running": 1, "kering":11000, "basah":9600, "lux_min":10000, "lux_max":30000, "durasi_max_pump":30, "settingsfile":"settings.txt", "jadwalfile":""}
 jadwal=[]
 
 #thread lock untuk mencegah tabrakan antara thread measurement dan server mengakses data
@@ -216,7 +216,8 @@ def readADS(printing=True):
       v = new_ch1*4.096/32767
       # awas math error, batasi v supaya 33000-v*10000 tidak negatif
       v = min(3.2, v) # sekitar 2,7 juta lux - kalau sampai angka segini mungkin LDRnya korslet?
-      lux = math.pow(((33000-v*10000)/(v*1043460)), (-1/0.548))
+      lux = math.pow(((33000-v*10000)/(v*8.2686*33000)), (-1/0.46))
+      #lux = math.pow(((33000-v*10000)/(v*1043460)), (-1/0.548))
       #lux = exp(-ln(d)/0.548)+22.7)
       #lux = math.exp(-math.log(new_ch1)/0.548+22.7)
       sensordata["A1"]=lux
