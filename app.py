@@ -68,7 +68,7 @@ dht = adafruit_dht.DHT11(board.D4)
 #variabel untuk menyimpan segala data dan status
 status={"dht":0, "ADS": 0, "time": 0, "pwmout": 0, "pump": 0, "led": 0,"sudah_nyiram": False, "menit_terakhir": 0, "percentage_led":0,"testpump":0}
 sensordata={"A0":0, "A1": 0, "temp": 0, "humid": 0}
-settings={"interval":2, "report_update": 300, "running": 1, "kering":26556, "basah":14949, "lux_min":15000, "lux_max":30000, "durasi_max_pump":10, "settingsfile":"settings.txt", "jadwalfile":""}
+settings={"interval":2, "report_update": 300, "running": 1, "kering":11000, "basah":9600, "lux_min":15000, "lux_max":30000, "durasi_max_pump":30, "settingsfile":"settings.txt", "jadwalfile":""}
 jadwal=[]
 
 #thread lock untuk mencegah tabrakan antara thread measurement dan server mengakses data
@@ -302,7 +302,7 @@ def start_control_thread():
         pwmout(percentage)
         print("lux di bawah 15.000 > nyala maksimal")
       elif sensordata["A1"] < settings["lux_max"] : #di atas 15.000 s.d 30.000 akan menyala sesuai persentase
-        percentage = (100/(settings["lux_min"]-settings["lux_man"])*sensordata["A1"]+100)
+        percentage = (100/(settings["lux_min"]-settings["lux_max"])*sensordata["A1"]+100)
         pwmout(percentage)
         print("nyala lampu sesuai persentase")
       else: #30.000 ke atas, ga nyala
