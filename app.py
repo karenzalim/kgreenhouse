@@ -388,7 +388,7 @@ def start_report_thread():
 def start_camera_thread():
   print("Camera thread started")
   while True:
-    sleep(15)
+    time.sleep(15)
     print("camera> taking photo now...")
     t1 = time.localtime()
     namafilefoto="photos/" + time.strftime("%Y-%m-%d %H%M%S", t1) + ".jpg"
@@ -397,7 +397,7 @@ def start_camera_thread():
       print("camera> done taking photo: " + namafilefoto)
     except:
       print("Error dari camera!")
-    sleep(1785) #setengah jam sekali
+    time.sleep(1785) #setengah jam sekali
 
 setled(0,1)
 time.sleep(0.2)
