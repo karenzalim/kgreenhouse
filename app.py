@@ -350,14 +350,18 @@ def start_server_thread():
 def start_measure_thread():
   print("Measure thread start")
   while True:
-    setled(1,1)
-    readADS(True) #True untuk print hasilnya ke terminal
-    readDHT(True)
-    time.sleep(0.05)
-    setled(1,0)
-    with datalock:
-      t=settings["interval"]
-    time.sleep(t-0.05)
+    try:
+      setled(1,1)
+      readADS(True) #True untuk print hasilnya ke terminal
+      readDHT(True)
+      time.sleep(0.05)
+      setled(1,0)
+    except:
+      print("Error dalam measure_thread!")
+    finally:
+      with datalock:
+        t=settings["interval"]
+      time.sleep(t-0.05)
 
 def start_report_thread():
   while True:
@@ -380,6 +384,20 @@ def start_report_thread():
         t=settings["report_update"]
       t2=time.time()
       #time.sleep(1)
+
+def start_camera_thread():
+  print("Camera thread started")
+  while true:
+    sleep(15)
+    print("camera> taking photo now...")
+    t1 = time.localtime()
+    namafilefoto="photos/" + time.strftime("%Y-%m-%d %H%M%S", t1) + ".jpg"
+    try:
+      os.system("rpicam-still -o " + namafilefoto)
+      print("camera> done taking photo: " + namafilefoto)
+    except:
+      print("Error dari camera!")
+    sleep(1785) #setengah jam sekali
 
 setled(0,1)
 time.sleep(0.2)
@@ -429,6 +447,8 @@ if __name__== "__main__": #untuk apasih ini
   report_thread.start()
   control_thread = threading.Thread(target=start_control_thread, daemon=True)
   control_thread.start()
+  camera_thread = threading.Thread(target=start_camera_thread, daemon=True)
+  camera_thread.start()
   #TODO: mengaktifkan output LED dan pompa
   #program utama menunggu di sini. Jika program utama selesai maka kedua thread daemon akan terminate
 
