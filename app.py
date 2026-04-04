@@ -387,7 +387,7 @@ def start_report_thread():
 
 def start_camera_thread():
   print("Camera thread started")
-  while true:
+  while True:
     sleep(15)
     print("camera> taking photo now...")
     t1 = time.localtime()
