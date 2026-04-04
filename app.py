@@ -391,7 +391,7 @@ def start_camera_thread():
     time.sleep(15)
     print("camera> taking photo now...")
     t1 = time.localtime()
-    namafilefoto="photos/" + time.strftime("%Y-%m-%d %H%M%S", t1) + ".jpg"
+    namafilefoto="photos/" + time.strftime("%Y-%m-%d_%H%M%S", t1) + ".jpg"
     try:
       os.system("rpicam-still -o " + namafilefoto)
       print("camera> done taking photo: " + namafilefoto)
