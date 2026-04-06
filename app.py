@@ -323,7 +323,7 @@ def start_control_thread():
       if sensordata["A0"] > settings["basah"]:
         print("start pump")
         durasi_pump = ((sensordata["A0"]-settings["basah"])/(settings["kering"]-settings["basah"]))*settings["durasi_max_pump"] 
-        durasi_pump = min(durasi_pump, settings["durasi_max_pump"]
+        durasi_pump = min(durasi_pump, settings["durasi_max_pump"])
         time.sleep(durasi_pump)
         setled(no=2,state=0)
         print("beres nyiram")
